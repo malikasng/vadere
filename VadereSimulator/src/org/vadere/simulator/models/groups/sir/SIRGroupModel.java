@@ -2,6 +2,7 @@ package org.vadere.simulator.models.groups.sir;
 
 
 import org.vadere.annotation.factories.models.ModelClass;
+import org.vadere.simulator.control.simulation.Simulation;
 import org.vadere.simulator.models.Model;
 import org.vadere.simulator.models.groups.AbstractGroupModel;
 import org.vadere.simulator.models.groups.Group;
@@ -11,6 +12,7 @@ import org.vadere.simulator.models.potential.fields.IPotentialFieldTarget;
 import org.vadere.simulator.projects.Domain;
 import org.vadere.state.attributes.Attributes;
 import org.vadere.simulator.models.groups.sir.SIRGroup;
+import org.vadere.state.attributes.AttributesSimulation;
 import org.vadere.state.attributes.models.AttributesSIRG;
 import org.vadere.state.attributes.scenario.AttributesAgent;
 import org.vadere.state.scenario.DynamicElementContainer;
@@ -32,6 +34,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	private Topography topography;
 	private IPotentialFieldTarget potentialFieldTarget;
 	private int totalInfected = 0;
+	private double simTimeStepLength = 0.4;
 
 	public SIRGroupModel() {
 		this.groupsById = new LinkedHashMap<>();
@@ -40,7 +43,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 
 	@Override
 	public void initialize(List<Attributes> attributesList, Domain domain,
-	                       AttributesAgent attributesPedestrian, Random random) {
+						   AttributesAgent attributesPedestrian, Random random) {
 		this.attributesSIRG = Model.findAttributes(attributesList, AttributesSIRG.class);
 		this.topography = domain.getTopography();
 		this.random = random;
@@ -127,6 +130,10 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		}
 	}
 
+	public void setSimTimeStepLength(double simTimeStepLength) {
+		this.simTimeStepLength = simTimeStepLength;
+	}
+
 	private void initializeGroupsOfInitialPedestrians() {
 		// get all pedestrians already in topography
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
@@ -184,7 +191,6 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	public void update(final double simTimeInSec) {
 		// check the positions of all pedestrians and switch groups to INFECTED (or REMOVED).
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
-
 		if (c.getElements().size() > 0) {
 			for(Pedestrian p : c.getElements()) {
 				// loop over neighbors and set infected if we are close
@@ -192,8 +198,9 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 					if(p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
 						continue;
 					double dist = p.getPosition().distance(p_neighbor.getPosition());
-					if (dist < attributesSIRG.getInfectionMaxDistance() &&
-							this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
+					if (dist < attributesSIRG.getInfectionMaxDistance() + p.getSpeedDistributionMean() * simTimeStepLength
+							+ p_neighbor.getSpeedDistributionMean() * simTimeStepLength
+							&& this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
 						SIRGroup g = getGroup(p);
 						if (g.getID() == SIRType.ID_SUSCEPTIBLE.ordinal()) {
 							elementRemoved(p);
