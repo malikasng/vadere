@@ -10,8 +10,10 @@ public class AttributesSIRG extends Attributes {
 	private double infectionRate = 0.01;
 	private double infectionMaxDistance = 1;
 
+	// Controls the number of recovered pedestrians in the beginning of the simulation.This value can also we controlled using the GUI
 	private int recoveredAtStart = 0;
 
+	// Controls the Recovery rate of the pedestrians. This value can also we controlled using the GUI
 	private double recoveryRate = 0.01;
 
 	public int getInfectionsAtStart() { return infectionsAtStart; }

@@ -104,7 +104,12 @@ public abstract class SimulationModel<T extends DefaultSimulationConfig> extends
 		if (ped.getGroupIds().isEmpty() || (!ped.getGroupSizes().isEmpty() && ped.getGroupSizes().getFirst() == 1)) {
 			return config.getPedestrianDefaultColor();
 		}
-
+		/*
+		 We set the default group colous to the following values
+		 RED: INFECTED
+		 BLUE: SUSCEPTIBLE
+		 GREEN: RECOVERED
+		 */
 		int groupId = ped.getGroupIds().getFirst();
 		Color c = colorMap.get(groupId);
 		if (c == null) {

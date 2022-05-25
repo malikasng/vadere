@@ -34,8 +34,10 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	private int totalInfected = 0;
 	private int totalRecovered = 0;
 
+	// Record previous time step for decoupling the timestep length from the visualization
 	private double prevSimTimeInSec = -0.1;
 
+	// Probability of recovery
 	double recoveryProbablity = 0.005;
 
 	public SIRGroupModel() {
@@ -80,7 +82,10 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 			this.totalInfected += 1;
 			return SIRType.ID_INFECTED.ordinal();
 		}
-		else if(//this.random.nextDouble() < this.attributesSIRG.getRecoveryRate() &&
+
+		// Added a new case to add recovered persons in the beginning if required
+
+		else if(
 		 	this.totalRecovered < this.attributesSIRG.getRecoveredAtStart()){
 			if(!getGroupsById().containsKey(SIRType.ID_RECOVERED.ordinal()))
 			{
@@ -205,17 +210,31 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
 		double w= topography.getAttributes().getBounds().width;
 		double h = topography.getAttributes().getBounds().height;
+
+		// Create grid cell
 		LinkedCellsGrid<Pedestrian> linkedCellsGrid =  new LinkedCellsGrid<>(topography.getAttributes().getBounds().x,topography.getAttributes().getBounds().y,
 				w,h,w*h);
 
+		// Add pedestrian to grid cells
 		if (c.getElements().size() > 0) {
 			for (Pedestrian p : c.getElements()) {
 				linkedCellsGrid.addObject(p);
 			}
 		}
+		/*
+			We update the infections and recovery rates every 0.1 seconds regardless of the actual simTimeStepLength.
+			The loop runs n times if the simTimeStepLength = 0.n. Thus, we compensate the simTimeStepLength by running the
+			update function multiple times. E.g. if the simTimeStepLength = 0.9, the loop runs 9 times; if simTimeStepLength = 0.4,
+			it runs 4 times etc.
+		 */
 		for (int i = 0; i < timeStepLength; i++) {
 			for (Pedestrian p : c.getElements()) {
-				// Going to recover
+				/*
+					 Going to recover.
+					 If the current pedestrian is infected. We randomly sample a value between 0 and 1 with probability = recoveryProbablity.
+					 If the value is lesser than the recovery rate we mark the pedestrian as recovered
+				 */
+
 				if (getGroup(p).getID() == SIRType.ID_INFECTED.ordinal()) {
 					if (this.random.nextDouble() + this.recoveryProbablity < attributesSIRG.getRecoveryRate()) {
 						elementRemoved(p);
@@ -225,13 +244,15 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 						continue;
 					}
 				}
-				List<Pedestrian> pedestrians = linkedCellsGrid.getObjectsTest(p.getPosition(), attributesSIRG.getInfectionMaxDistance());
+				// We use the function getObjects to get the nearby objects in the radius InfectionMaxDistance.
+				List<Pedestrian> pedestrians = linkedCellsGrid.getObjects(p.getPosition(), attributesSIRG.getInfectionMaxDistance());
 				for (Pedestrian p_neighbor : pedestrians) {
 					// If neighbour is the same pedestrian or if the neighbour is not infected -> Skip to the next neighbour
 					if (p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
 						continue;
 
 					double dist = p.getPosition().distance(p_neighbor.getPosition());
+
 					if (this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
 						SIRGroup g = getGroup(p);
 						// If the current pedestrian is susceptible to infection update to infected
@@ -243,26 +264,9 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 				}
 			}
 		}
+
 		prevSimTimeInSec = simTimeInSec;
 
-		/*
-		if (c.getElements().size() > 0) {
-			for(Pedestrian p : c.getElements()) {
-				// loop over neighbors and set infected if we are close
-				for(Pedestrian p_neighbor : c.getElements()) {
-					if(p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
-						continue;
-					double dist = p.getPosition().distance(p_neighbor.getPosition());
-					if (dist < attributesSIRG.getInfectionMaxDistance() &&
-							this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
-						SIRGroup g = getGroup(p);
-						if (g.getID() == SIRType.ID_SUSCEPTIBLE.ordinal()) {
-							elementRemoved(p);
-							assignToGroup(p, SIRType.ID_INFECTED.ordinal());
-						}
-					}
-				}
-			}
-		}*/
+
 	}
 }
