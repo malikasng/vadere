@@ -1,6 +1,7 @@
 package org.vadere.simulator.models.groups.sir;
 
 
+import org.apache.commons.math3.util.Precision;
 import org.vadere.annotation.factories.models.ModelClass;
 import org.vadere.simulator.control.simulation.Simulation;
 import org.vadere.simulator.models.Model;
@@ -18,6 +19,7 @@ import org.vadere.state.attributes.scenario.AttributesAgent;
 import org.vadere.state.scenario.DynamicElementContainer;
 import org.vadere.state.scenario.Pedestrian;
 import org.vadere.state.scenario.Topography;
+import org.vadere.util.geometry.LinkedCellsGrid;
 
 import java.util.*;
 
@@ -34,7 +36,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	private Topography topography;
 	private IPotentialFieldTarget potentialFieldTarget;
 	private int totalInfected = 0;
-	private double simTimeStepLength = 0.4;
+	private double prevSimTimeInSec = 0.0;
 
 	public SIRGroupModel() {
 		this.groupsById = new LinkedHashMap<>();
@@ -130,10 +132,6 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		}
 	}
 
-	public void setSimTimeStepLength(double simTimeStepLength) {
-		this.simTimeStepLength = simTimeStepLength;
-	}
-
 	private void initializeGroupsOfInitialPedestrians() {
 		// get all pedestrians already in topography
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
@@ -189,26 +187,38 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 
 	@Override
 	public void update(final double simTimeInSec) {
-		// check the positions of all pedestrians and switch groups to INFECTED (or REMOVED).
+		int timeStepLength = (int) Math.round((simTimeInSec - prevSimTimeInSec) * 10);
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
+		double w= topography.getAttributes().getBounds().width;
+		double h = topography.getAttributes().getBounds().height;
+		LinkedCellsGrid<Pedestrian> linkedCellsGrid =  new LinkedCellsGrid<>(topography.getAttributes().getBounds().x,topography.getAttributes().getBounds().y,
+				w,h,w*h);
 		if (c.getElements().size() > 0) {
-			for(Pedestrian p : c.getElements()) {
-				// loop over neighbors and set infected if we are close
-				for(Pedestrian p_neighbor : c.getElements()) {
+			for (Pedestrian p : c.getElements()) {
+				linkedCellsGrid.addObject(p);
+			}
+		for (int i = 0; i < timeStepLength; i++) {
+			for (Pedestrian p : c.getElements()) {
+				List<Pedestrian> pedestrians = linkedCellsGrid.getObjects(p.getPosition(),attributesSIRG.getInfectionMaxDistance());
+				for(Pedestrian p_neighbor : pedestrians){
+					// If neighbour is the same pedestrian or if the neighbour is not infected -> Skip to the next neighbour
 					if(p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
 						continue;
+
 					double dist = p.getPosition().distance(p_neighbor.getPosition());
-					if (dist < attributesSIRG.getInfectionMaxDistance() + p.getSpeedDistributionMean() * simTimeStepLength
-							+ p_neighbor.getSpeedDistributionMean() * simTimeStepLength
-							&& this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
+					if(this.random.nextDouble() < attributesSIRG.getInfectionRate()){
 						SIRGroup g = getGroup(p);
+						// If the current pedestrian is susceptible to infection update to infected
 						if (g.getID() == SIRType.ID_SUSCEPTIBLE.ordinal()) {
 							elementRemoved(p);
 							assignToGroup(p, SIRType.ID_INFECTED.ordinal());
 						}
 					}
 				}
+
+			}
 			}
 		}
+		prevSimTimeInSec = simTimeInSec;
 	}
 }

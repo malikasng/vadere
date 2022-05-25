@@ -478,9 +478,6 @@ public class Simulation implements ControllerProvider{
 
 			// Only update until there are pedestrians in the scenario or pedestrian to spawn or aerosol clouds persist
 			if (!stillSpawningSource.isEmpty() || pedestriansInSimulation > 0 || aerosolCloudsInSimulation > 0) {
-				if (m.getClass() == SIRGroupModel.class) {
-					((SIRGroupModel)m).setSimTimeStepLength(simTimeStepLength);
-				}
 				m.update(simTimeInSec);
 
 				if (topography.isRecomputeCells()) {
