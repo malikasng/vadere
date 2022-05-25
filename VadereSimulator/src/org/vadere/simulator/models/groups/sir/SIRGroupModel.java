@@ -36,7 +36,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 
 	private double prevSimTimeInSec = -0.1;
 
-	double recoveryProbablity = 0.01;
+	double recoveryProbablity = 0.005;
 
 	public SIRGroupModel() {
 		this.groupsById = new LinkedHashMap<>();
@@ -51,7 +51,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		this.random = random;
 		this.totalInfected = 0;
 		this.totalRecovered = 0;
-		this.recoveryProbablity =0.01;
+		this.recoveryProbablity =0.005;
 	}
 
 
@@ -80,8 +80,8 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 			this.totalInfected += 1;
 			return SIRType.ID_INFECTED.ordinal();
 		}
-		else if(this.random.nextDouble() < this.attributesSIRG.getRecoveryRate()
-				|| this.totalRecovered < this.attributesSIRG.getRecoveredAtStart()){
+		else if(//this.random.nextDouble() < this.attributesSIRG.getRecoveryRate() &&
+		 	this.totalRecovered < this.attributesSIRG.getRecoveredAtStart()){
 			if(!getGroupsById().containsKey(SIRType.ID_RECOVERED.ordinal()))
 			{
 				SIRGroup g = getNewGroup(SIRType.ID_RECOVERED.ordinal(), Integer.MAX_VALUE/2);
