@@ -10,6 +10,7 @@ import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.vadere.meshing.mesh.gen.PMesh;
 import org.vadere.meshing.mesh.inter.IMesh;
+import org.vadere.simulator.models.groups.sir.SIRType;
 import org.vadere.state.scenario.Agent;
 import org.vadere.state.scenario.Pedestrian;
 import org.vadere.util.geometry.shapes.IPoint;
@@ -107,7 +108,18 @@ public abstract class SimulationModel<T extends DefaultSimulationConfig> extends
 		int groupId = ped.getGroupIds().getFirst();
 		Color c = colorMap.get(groupId);
 		if (c == null) {
-			c = new Color(Color.HSBtoRGB(random.nextFloat(), 1f, 0.75f));
+			if (groupId == SIRType.ID_INFECTED.ordinal()){
+				c = new Color(255, 0, 0);
+			} else if (groupId == SIRType.ID_RECOVERED.ordinal()) {
+				c = new Color(0, 255, 0);
+			}
+			else if (groupId == SIRType.ID_SUSCEPTIBLE.ordinal()) {
+				c = new Color(0, 0, 255);
+			}
+			else{
+				c = new Color(0, 0, 0);
+			}
+			//c = new Color(Color.HSBtoRGB(random.nextFloat(), 1f, 0.75f));
 			colorMap.put(groupId, c);
 		}
 		return c;

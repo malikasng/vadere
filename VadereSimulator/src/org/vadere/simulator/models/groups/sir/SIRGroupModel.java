@@ -34,7 +34,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	private int totalInfected = 0;
 	private int totalRecovered = 0;
 
-	private double simTimeStepLength = 0.4;
+	private double prevSimTimeInSec = -0.1;
 
 	double recoveryProbablity = 0.01;
 
@@ -69,10 +69,6 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		return potentialFieldTarget;
 	}
 
-	public void setSimTimeStepLength(double simTimeStepLength) {
-		this.simTimeStepLength = simTimeStepLength;
-	}
-
 	private int getFreeGroupId() {
 		if(this.random.nextDouble() < this.attributesSIRG.getInfectionRate()
 				|| this.totalInfected < this.attributesSIRG.getInfectionsAtStart()) {
@@ -91,6 +87,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 				SIRGroup g = getNewGroup(SIRType.ID_RECOVERED.ordinal(), Integer.MAX_VALUE/2);
 				getGroupsById().put(SIRType.ID_RECOVERED.ordinal(), g);
 			}
+			this.totalRecovered += 1;
 			return SIRType.ID_RECOVERED.ordinal();
 		}
 		else{
@@ -203,6 +200,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 
 	@Override
 	public void update(final double simTimeInSec) {
+		int timeStepLength = (int) Math.round((simTimeInSec - prevSimTimeInSec) * 10);
 		// check the positions of all pedestrians and switch groups to INFECTED (or REMOVED).
 		DynamicElementContainer<Pedestrian> c = topography.getPedestrianDynamicElements();
 		double w= topography.getAttributes().getBounds().width;
@@ -214,11 +212,12 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 			for (Pedestrian p : c.getElements()) {
 				linkedCellsGrid.addObject(p);
 			}
-
+		}
+		for (int i = 0; i < timeStepLength; i++) {
 			for (Pedestrian p : c.getElements()) {
 				// Going to recover
-				if(getGroup(p).getID() == SIRType.ID_INFECTED.ordinal()) {
-					if (this.random.nextDouble() + this.recoveryProbablity <  attributesSIRG.getRecoveryRate()) {
+				if (getGroup(p).getID() == SIRType.ID_INFECTED.ordinal()) {
+					if (this.random.nextDouble() + this.recoveryProbablity < attributesSIRG.getRecoveryRate()) {
 						elementRemoved(p);
 						assignToGroup(p, SIRType.ID_RECOVERED.ordinal());
 						this.totalInfected--;
@@ -226,14 +225,14 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 						continue;
 					}
 				}
-				List<Pedestrian> pedestrians = linkedCellsGrid.getObjectsTest(p.getPosition(),attributesSIRG.getInfectionMaxDistance());
-				for(Pedestrian p_neighbor : pedestrians){
+				List<Pedestrian> pedestrians = linkedCellsGrid.getObjectsTest(p.getPosition(), attributesSIRG.getInfectionMaxDistance());
+				for (Pedestrian p_neighbor : pedestrians) {
 					// If neighbour is the same pedestrian or if the neighbour is not infected -> Skip to the next neighbour
-					if(p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
+					if (p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
 						continue;
 
 					double dist = p.getPosition().distance(p_neighbor.getPosition());
-					if(this.random.nextDouble() < attributesSIRG.getInfectionRate()){
+					if (this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
 						SIRGroup g = getGroup(p);
 						// If the current pedestrian is susceptible to infection update to infected
 						if (g.getID() == SIRType.ID_SUSCEPTIBLE.ordinal()) {
@@ -241,13 +240,10 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 							assignToGroup(p, SIRType.ID_INFECTED.ordinal());
 						}
 					}
-
 				}
 			}
-
-
-
 		}
+		prevSimTimeInSec = simTimeInSec;
 
 		/*
 		if (c.getElements().size() > 0) {
