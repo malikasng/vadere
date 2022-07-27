@@ -223,20 +223,13 @@ public class SIROGroupModel extends AbstractGroupModel<SIROGroup> {
 				linkedCellsGrid.addObject(p);
 			}
 		}
-		/*
-			We update the infections and recovery rates every 0.1 seconds regardless of the actual simTimeStepLength.
-			The loop runs n times if the simTimeStepLength = 0.n. Thus, we compensate the simTimeStepLength by running the
-			update function multiple times. E.g. if the simTimeStepLength = 0.9, the loop runs 9 times; if simTimeStepLength = 0.4,
-			it runs 4 times etc.
-		 */
 		for (int i = 0; i < timeStepLength; i++) {
 			for (Pedestrian p : c.getElements()) {
 				/*
-					 Going to recover.
-					 If the current pedestrian is intoxicated. We randomly sample a value between 0 and 1 with probability = recoveryProbablity.
-					 If the value is lesser than the recovery rate we mark the pedestrian as recovered
+					 Becoming relieved.
+					 If the current pedestrian is intoxicated. We randomly sample a value between 0 and 1 with probability = reliefProbablity.
+					 If the value is lesser than the relief rate we mark the pedestrian as relieved.
 				 */
-
 				if (getGroup(p).getID() == SIROType.ID_INTOXICATED.ordinal()) {
 					if (this.random.nextDouble() + this.recoveryProbablity < attributesSIRG.getReliefRate()) {
 						elementRemoved(p);
@@ -255,7 +248,7 @@ public class SIROGroupModel extends AbstractGroupModel<SIROGroup> {
 									p_neighbor.getId() != p.getId() &&
 									// Relieved pedestrians don't have to avoid each other
 									getGroup(p_neighbor).getID() != SIROType.ID_RELIEVED.ordinal()) {
-								// Do not allow to come closer
+								// Do not allow to come closer than the obstacle radius allows.
 								VPoint neighborPosition = p_neighbor.getPosition();
 
 								// Compute the shift vector and normalize it
@@ -264,6 +257,7 @@ public class SIROGroupModel extends AbstractGroupModel<SIROGroup> {
 								double norm = Math.sqrt(Math.pow(new_x, 2) + Math.pow(new_y, 2));
 								new_x = new_x / norm / 5.0;
 								new_y = new_y / norm / 5.0;
+								// Shift the neighbour outside the radius
 								VPoint shiftedPos = new VPoint(neighborPosition.getX() + new_x, neighborPosition.getY() + new_y);
 								p_neighbor.setPosition(shiftedPos);
 							}
